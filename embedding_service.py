@@ -110,7 +110,7 @@ if __name__ == "__main__":
             chunks,
             embeddings,
             top_k=5,
-            program_filter="MCA"
+            program_filter=None
         )
 
         for index, result in enumerate(results, start=1):

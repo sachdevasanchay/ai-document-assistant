@@ -7,49 +7,122 @@ from text_chunker import split_text_into_chunks
 from embedding_service import create_embeddings, search_similar_chunks
 from ai_service import generate_answer
 
+
 st.set_page_config(
     page_title="AI Document Assistant",
-    page_icon="📄"
+    page_icon="📄",
+    layout="wide"
 )
 
 st.title("📄 AI Document Assistant")
-st.write("Upload a PDF and ask questions about it.")
+st.write("Upload multiple PDFs and ask questions about their content.")
 
-uploaded_file = st.file_uploader("Upload your PDF", type=["pdf"])
 
-if uploaded_file and st.button("Process PDF"):
+# Initialize session state
+if "documents" not in st.session_state:
+    st.session_state.documents = {}
 
-    with st.spinner("Processing PDF..."):
-        pages = extract_pdf_text(BytesIO(uploaded_file.getvalue()))
 
-        if pages:
-            chunks = split_text_into_chunks(pages)
-            embeddings = create_embeddings(chunks)
+# Multiple PDF upload
+uploaded_files = st.file_uploader(
+    "Upload your PDF documents",
+    type=["pdf"],
+    accept_multiple_files=True
+)
 
-            st.session_state.chunks = chunks
-            st.session_state.embeddings = embeddings
-            st.session_state.messages = []
 
-            st.success(f"PDF processed! {len(chunks)} chunks created.")
-        else:
-            st.error("No readable text found.")
+# Process uploaded PDFs
+if uploaded_files and st.button("Process Documents"):
 
-if "chunks" in st.session_state:
+    try:
+        for uploaded_file in uploaded_files:
 
-    st.subheader("Ask questions about your PDF")
+            file_name = uploaded_file.name
 
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
+            if file_name in st.session_state.documents:
+                st.info(f"{file_name} is already processed.")
+                continue
 
-    for message in st.session_state.messages:
+            with st.spinner(f"Processing {file_name}..."):
+
+                pages = extract_pdf_text(
+                    BytesIO(uploaded_file.getvalue())
+                )
+
+                if not pages:
+                    st.warning(f"No readable text found in {file_name}.")
+                    continue
+
+                chunks = split_text_into_chunks(pages)
+                embeddings = create_embeddings(chunks)
+
+                st.session_state.documents[file_name] = {
+                    "chunks": chunks,
+                    "embeddings": embeddings,
+                    "messages": []
+                }
+
+                st.success(
+                    f"{file_name} processed successfully! "
+                    f"{len(chunks)} chunks created."
+                )
+
+    except Exception as error:
+        st.error(f"Error processing documents: {error}")
+
+
+# Display processed documents
+if st.session_state.documents:
+
+    st.divider()
+    st.subheader("📚 Your Documents")
+
+    for file_name in st.session_state.documents:
+        st.write(f"📄 {file_name}")
+
+    st.divider()
+
+    # Select a document
+    selected_document = st.selectbox(
+        "Choose a document to chat with",
+        list(st.session_state.documents.keys())
+    )
+
+    # Get selected document
+    document = st.session_state.documents[selected_document]
+
+    # Initialize chat history for older processed documents
+    if "messages" not in document:
+        document["messages"] = []
+
+    # Delete selected document
+    if st.button("🗑️ Delete Selected Document"):
+
+        del st.session_state.documents[selected_document]
+
+        st.success(f"{selected_document} deleted successfully!")
+
+        st.rerun()
+
+    st.divider()
+
+    st.subheader(f"💬 Chat with {selected_document}")
+
+    # Display selected document's chat history
+    for message in document["messages"]:
+
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    question = st.chat_input("Ask something about your PDF...")
+    # Ask question
+    question = st.chat_input(
+        "Ask a question about this document..."
+    )
 
     if question:
 
-        st.session_state.messages.append({
+        # Save user message
+        document["messages"].append({
             "role": "user",
             "content": question
         })
@@ -58,20 +131,33 @@ if "chunks" in st.session_state:
             st.markdown(question)
 
         with st.chat_message("assistant"):
-            with st.spinner("Finding the answer..."):
 
-                results = search_similar_chunks(
-                    question,
-                    st.session_state.chunks,
-                    st.session_state.embeddings,
-                    top_k=5,
-                )
+            with st.spinner(
+                "Searching document and generating answer..."
+            ):
 
-                answer = generate_answer(question, results)
+                try:
 
-                st.markdown(answer)
+                    results = search_similar_chunks(
+                        question,
+                        document["chunks"],
+                        document["embeddings"],
+                        top_k=5,
+                        program_filter=None
+                    )
 
-                st.session_state.messages.append({
-                    "role": "assistant",
-                    "content": answer
-                })
+                    answer = generate_answer(question, results)
+
+                    st.markdown(answer)
+
+                    # Save assistant response
+                    document["messages"].append({
+                        "role": "assistant",
+                        "content": answer
+                    })
+
+                except Exception as error:
+                    st.error(f"Error generating answer: {error}")
+
+else:
+    st.info("Upload one or more PDFs and click Process Documents.")
