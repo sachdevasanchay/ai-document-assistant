@@ -1,4 +1,6 @@
-streamlit
+fastapi
+uvicorn
+python-multipart
 pypdf
 sentence-transformers
 google-genai
@@ -7,8 +9,3 @@ pymupdf
 pytesseract
 pillow
 pymongo[srv]
-fastapi
-uvicorn
-python-multipart
-pymongo
-python-dotenv
