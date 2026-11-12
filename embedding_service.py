@@ -1,5 +1,3 @@
-
-from sentence_transformers import SentenceTransformer, util
 from text_chunker import split_text_into_chunks
 from pdf_extractor import extract_pdf_text
 from ai_service import generate_answer
@@ -7,7 +5,7 @@ import re
 import math
 
 
-# Load the AI embedding model only when required
+# The AI embedding model is loaded only when first needed
 model = None
 
 
@@ -15,6 +13,10 @@ def get_embedding_model():
     global model
 
     if model is None:
+        # Imported here (not at the top) so the app starts fast
+        # and Render can detect the open port
+        from sentence_transformers import SentenceTransformer
+
         model = SentenceTransformer("all-MiniLM-L6-v2")
 
     return model
@@ -108,6 +110,8 @@ def search_similar_chunks(
     program_filter=None,
     min_similarity=0.25
 ):
+    # Imported here so it doesn't slow down app startup
+    from sentence_transformers import util
 
     embedding_model = get_embedding_model()
 
