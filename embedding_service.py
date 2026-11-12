@@ -1,5 +1,5 @@
 
-from sentence_transformers import SentenceTransformer, util, CrossEncoder
+from sentence_transformers import SentenceTransformer, util
 from text_chunker import split_text_into_chunks
 from pdf_extractor import extract_pdf_text
 from ai_service import generate_answer
@@ -7,14 +7,25 @@ import re
 import math
 
 
-# Load the AI embedding model
-model = SentenceTransformer("all-MiniLM-L6-v2")
-reranker = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+# Load the AI embedding model only when required
+model = None
+
+
+def get_embedding_model():
+    global model
+
+    if model is None:
+        model = SentenceTransformer("all-MiniLM-L6-v2")
+
+    return model
+
 
 def create_embeddings(chunks):
+    embedding_model = get_embedding_model()
+
     texts = [chunk["text"] for chunk in chunks]
 
-    embeddings = model.encode(
+    embeddings = embedding_model.encode(
         texts,
         convert_to_tensor=True
     )
@@ -98,7 +109,9 @@ def search_similar_chunks(
     min_similarity=0.25
 ):
 
-    question_embedding = model.encode(
+    embedding_model = get_embedding_model()
+
+    question_embedding = embedding_model.encode(
         question,
         convert_to_tensor=True
     )
@@ -143,7 +156,7 @@ def search_similar_chunks(
     # Get embeddings for candidate chunks
     if program_filter:
 
-        filtered_embeddings = model.encode(
+        filtered_embeddings = embedding_model.encode(
             [chunk["text"] for chunk in candidate_chunks],
             convert_to_tensor=True
         )
