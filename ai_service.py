@@ -2,7 +2,6 @@
 import os
 from google import genai
 from dotenv import load_dotenv
-import streamlit as st
 
 load_dotenv()
 
@@ -23,29 +22,46 @@ def generate_answer(question, search_results):
 
     for result in search_results:
         context += f"""
-Page: {result['page']}
-Information: {result['text']}
+[Page {result['page']}]
+{result['text']}
 """
 
     prompt = f"""
-You are a helpful PDF document assistant.
+You are a helpful AI document assistant.
 
-Answer the question using ONLY the provided document context.
+Your task is to answer the user's question using ONLY the
+provided document context.
 
-If the answer is unavailable, clearly say so.
-Never invent dates or information.
-Mention the source page number.
+Follow these rules strictly:
+
+1. Use only information available in the document context.
+2. Do not use your general knowledge to fill missing information.
+3. Do not invent dates, names, numbers, facts, or explanations.
+4. If the answer cannot be found in the provided context,
+   respond with:
+   "I could not find this information in the provided PDF context."
+5. Mention the relevant page number in your answer using
+   this format: [Page 3].
+6. If information comes from multiple pages, cite all relevant pages.
+7. Keep the answer clear, accurate, and easy to understand.
+8. Do not cite a page unless the provided context contains
+   information supporting your answer.
 
 DOCUMENT CONTEXT:
 {context}
 
 USER QUESTION:
 {question}
+
+ANSWER:
 """
 
     response = client.models.generate_content(
-        model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
+        model=os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite"),
         contents=prompt
     )
 
-    return response.text
+    if not response or not response.text:
+        return "I couldn't generate an answer. Please try again."
+
+    return response.text.strip()

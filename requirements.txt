@@ -3,3 +3,12 @@ pypdf
 sentence-transformers
 google-genai
 python-dotenv
+pymupdf
+pytesseract
+pillow
+pymongo[srv]
+fastapi
+uvicorn
+python-multipart
+pymongo
+python-dotenv
