@@ -23,7 +23,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
-        "https://ai-document-assistant-jm90.onrender.com"
+         "https://ai-documents-assistant.netlify.app"
     ],
     allow_credentials=True,
     allow_methods=["*"],
